@@ -4,104 +4,85 @@
   <meta charset="UTF-8">
   <title>White Wolf Chat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
-    #userList { width: 25%; border-right: 1px solid #ccc; padding: 10px; box-sizing: border-box; overflow-y: auto; }
-    #chatBox { flex: 1; display: flex; flex-direction: column; }
-    #messages { flex: 1; padding: 10px; overflow-y: auto; border-bottom: 1px solid #ccc; }
-    #newMessage { display: flex; }
-    #newMessage input { flex: 1; padding: 10px; border: none; border-top: 1px solid #ccc; }
-    #newMessage button { padding: 10px; border: none; background: #007bff; color: white; cursor: pointer; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #chatBox { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
     .message { margin: 5px 0; }
-    .sender { font-weight: bold; }
-    .user { cursor: pointer; padding: 5px; border-bottom: 1px solid #eee; }
-    .user:hover { background: #f0f0f0; }
+    .me { color: blue; }
+    .other { color: green; }
   </style>
 </head>
 <body>
-  <div id="userList">
-    <h3>Online Users</h3>
-    <div id="users"></div>
-  </div>
-
-  <div id="chatBox">
-    <div id="messages"></div>
-    <div id="newMessage">
-      <input type="text" id="messageInput" placeholder="Type your message..."/>
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
+  <h1>White Wolf Chat 🚀</h1>
+  
+  <input type="text" id="username" placeholder="Your name" />
+  <button onclick="setUsername()">Set Name</button>
+  
+  <div id="chatBox"></div>
+  
+  <input type="text" id="messageInput" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
 
   <script type="module">
-    // Firebase SDK
+    // Firebase imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getDatabase, ref, set, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBaQQoCQ6pOlXxWGmeFa8DNF3ZieFN4JNs",
       authDomain: "white-wolf-social-media.firebaseapp.com",
-      databaseURL: "https://white-wolf-social-media-default-rtdb.firebaseio.com",
+      databaseURL: "https://white-wolf-social-media-default-rtdb.firebaseio.com/", // <-- Add database URL
       projectId: "white-wolf-social-media",
       storageBucket: "white-wolf-social-media.appspot.com",
       messagingSenderId: "245248562952",
       appId: "1:245248562952:web:088741550a5e2e28c7febd"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let currentUser = prompt("Enter your name:");
-    const usersRef = ref(db, 'users/' + currentUser);
-    set(usersRef, { online: true });
+    let username = null;
 
-    let activeChat = null;
-
-    // Show online users
-    const usersDiv = document.getElementById('users');
-    onValue(ref(db, 'users'), snapshot => {
-      usersDiv.innerHTML = '';
-      snapshot.forEach(userSnap => {
-        const name = userSnap.key;
-        if(name !== currentUser) {
-          const div = document.createElement('div');
-          div.textContent = name;
-          div.classList.add('user');
-          div.onclick = () => openChat(name);
-          usersDiv.appendChild(div);
-        }
-      });
-    });
-
-    const messagesDiv = document.getElementById('messages');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    function openChat(user) {
-      activeChat = user;
-      messagesDiv.innerHTML = '';
-      const chatId = [currentUser, user].sort().join('_');
-      const chatRef = ref(db, 'chats/' + chatId);
-      onChildAdded(chatRef, snapshot => {
-        const msg = snapshot.val();
-        const div = document.createElement('div');
-        div.classList.add('message');
-        div.innerHTML = `<span class="sender">${msg.sender}:</span> ${msg.text}`;
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      });
-    }
-
-    sendBtn.onclick = () => {
-      if(activeChat && messageInput.value.trim() !== '') {
-        const chatId = [currentUser, activeChat].sort().join('_');
-        const chatRef = ref(db, 'chats/' + chatId);
-        push(chatRef, { sender: currentUser, text: messageInput.value });
-        messageInput.value = '';
+    function setUsername() {
+      const input = document.getElementById('username').value.trim();
+      if (input) {
+        username = input;
+        alert("Username set as: " + username);
       } else {
-        alert("Select a user first or type a message!");
+        alert("Enter a valid name!");
       }
     }
+
+    // Send message function
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const text = messageInput.value.trim();
+      if (!text || !username) {
+        alert("Set your name and type a message!");
+        return;
+      }
+
+      push(ref(db, 'messages'), {
+        user: username,
+        text: text,
+        timestamp: Date.now()
+      });
+
+      messageInput.value = '';
+    }
+
+    // Display messages in real-time
+    const chatBox = document.getElementById('chatBox');
+    onChildAdded(ref(db, 'messages'), (snapshot) => {
+      const msg = snapshot.val();
+      const div = document.createElement('div');
+      div.classList.add('message');
+      div.classList.add(msg.user === username ? 'me' : 'other');
+      div.textContent = msg.user + ": " + msg.text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 </body>
 </html>
-
-
