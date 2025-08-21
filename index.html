@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>White Wolf Chat</title>
   <style>
     body { font-family: Arial, sans-serif; background: #111; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -25,25 +25,19 @@
     </div>
   </div>
 
-  <!-- Username Prompt, stored in localStorage -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
   <script>
+    // Prompt username and save to localStorage
     let username = localStorage.getItem("wwolf_username");
     if (!username) {
       username = prompt("Enter your name:");
       if (!username) username = "Anonymous";
       localStorage.setItem("wwolf_username", username);
     }
-    window.username = username; // Make globally accessible for module script
-  </script>
-  
-  <!-- Firebase -->
-  <script type="module">
-    // Firebase SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp }
-      from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Your Firebase config
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBaQQoCQ6pOlXxWGmeFa8DNF3ZieFN4JNs",
       authDomain: "white-wolf-social-media.firebaseapp.com",
@@ -53,50 +47,51 @@
       appId: "1:245248562952:web:088741550a5e2e28c7febd"
     };
 
-    // Init Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     const messagesDiv = document.getElementById("messages");
     const input = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-button");
 
-    // Send message
-    function sendMessage() {
+    async function sendMessage() {
       const text = input.value.trim();
-      if (text !== "") {
-        addDoc(collection(db, "messages"), {
+      if (text === "") return;
+
+      try {
+        await db.collection("messages").add({
           text: text,
-          username: window.username,
-          timestamp: serverTimestamp()
+          username: username,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         input.value = "";
+      } catch (error) {
+        console.error("Error sending message: ", error);
       }
     }
 
     sendBtn.addEventListener("click", sendMessage);
 
-    // Send message on Enter key
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") sendMessage();
     });
 
-    // Load messages in real-time
-    const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
-    onSnapshot(q, (snapshot) => {
-      messagesDiv.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const msg = doc.data();
-        const div = document.createElement("div");
-        div.classList.add(
-          "message",
-          msg.username === window.username ? "sent" : "received"
-        );
-        div.innerHTML = `<b>${msg.username || "Anonymous"}:</b> ${msg.text}`;
-        messagesDiv.appendChild(div);
+    // Real-time listener
+    db.collection("messages")
+      .orderBy("timestamp", "asc")
+      .onSnapshot(snapshot => {
+        messagesDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const div = document.createElement("div");
+          div.classList.add("message");
+          div.classList.add(msg.username === username ? "sent" : "received");
+          div.innerHTML = `<b>${msg.username || "Anonymous"}:</b> ${msg.text}`;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
   </script>
 </body>
 </html>
