@@ -1,97 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>White Wolf Chat</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    #chat-container { width: 400px; background: #1e1e1e; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
-    #messages { flex: 1; padding: 10px; overflow-y: auto; }
-    .message { padding: 5px 10px; margin: 5px 0; border-radius: 5px; max-width: 70%; }
-    .sent { background: #0d6efd; align-self: flex-end; }
-    .received { background: #333; align-self: flex-start; }
-    #input-area { display: flex; border-top: 1px solid #333; }
-    #message-input { flex: 1; padding: 10px; border: none; outline: none; background: #222; color: white; }
-    #send-button { padding: 10px; background: #0d6efd; border: none; cursor: pointer; color: white; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bank PO Mock Test Tracker</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #f0f8ff;
+  }
+  h1 {
+    color: #007bff;
+  }
+  form {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 600px;
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+  }
+  input, select {
+    width: 100%;
+    padding: 7px;
+    margin-top: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  button {
+    margin-top: 15px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  th {
+    background-color: #007bff;
+    color: white;
+  }
+</style>
 </head>
 <body>
-  <div id="chat-container">
-    <div id="messages"></div>
-    <div id="input-area">
-      <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
-      <button id="send-button">Send</button>
-    </div>
-  </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<h1>Bank PO Mock Test Tracker</h1>
 
-  <script>
-    // Prompt username and save to localStorage
-    let username = localStorage.getItem("wwolf_username");
-    if (!username) {
-      username = prompt("Enter your name:");
-      if (!username) username = "Anonymous";
-      localStorage.setItem("wwolf_username", username);
-    }
+<form id="mockTestForm">
+  <label for="platform">Test Platform (e.g., Testbook, Guidely)</label>
+  <input type="text" id="platform" name="platform" required />
 
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBaQQoCQ6pOlXxWGmeFa8DNF3ZieFN4JNs",
-      authDomain: "white-wolf-social-media.firebaseapp.com",
-      projectId: "white-wolf-social-media",
-      storageBucket: "white-wolf-social-media.firebasestorage.app",
-      messagingSenderId: "245248562952",
-      appId: "1:245248562952:web:088741550a5e2e28c7febd"
+  <label for="date">Test Date</label>
+  <input type="date" id="date" name="date" required />
+
+  <label for="totalScore">Total Score</label>
+  <input type="number" id="totalScore" name="totalScore" min="0" required />
+
+  <label for="quantScore">Quantitative Score</label>
+  <input type="number" id="quantScore" name="quantScore" min="0" required />
+
+  <label for="reasoningScore">Reasoning Score</label>
+  <input type="number" id="reasoningScore" name="reasoningScore" min="0" required />
+
+  <label for="englishScore">English Score</label>
+  <input type="number" id="englishScore" name="englishScore" min="0" required />
+
+  <label for="percentile">Percentile</label>
+  <input type="number" id="percentile" name="percentile" min="0" max="100" step="0.01" required />
+
+  <label for="accuracy">Accuracy (%)</label>
+  <input type="number" id="accuracy" name="accuracy" min="0" max="100" step="0.01" required />
+
+  <button type="submit">Add Test</button>
+</form>
+
+<table id="testsTable">
+  <thead>
+    <tr>
+      <th>Platform</th>
+      <th>Date</th>
+      <th>Total Score</th>
+      <th>Quant Score</th>
+      <th>Reasoning Score</th>
+      <th>English Score</th>
+      <th>Percentile</th>
+      <th>Accuracy (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<script>
+  const form = document.getElementById('mockTestForm');
+  const tableBody = document.querySelector('#testsTable tbody');
+
+  // Load existing tests from localStorage
+  let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
+
+  function renderTests() {
+    tableBody.innerHTML = '';
+    tests.forEach(test => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${test.platform}</td>
+        <td>${test.date}</td>
+        <td>${test.totalScore}</td>
+        <td>${test.quantScore}</td>
+        <td>${test.reasoningScore}</td>
+        <td>${test.englishScore}</td>
+        <td>${test.percentile}</td>
+        <td>${test.accuracy}</td>
+      `;
+      tableBody.appendChild(row);
+    });
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const testData = {
+      platform: form.platform.value.trim(),
+      date: form.date.value,
+      totalScore: Number(form.totalScore.value),
+      quantScore: Number(form.quantScore.value),
+      reasoningScore: Number(form.reasoningScore.value),
+      englishScore: Number(form.englishScore.value),
+      percentile: Number(form.percentile.value),
+      accuracy: Number(form.accuracy.value)
     };
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    tests.push(testData);
+    localStorage.setItem('mockTests', JSON.stringify(tests));
 
-    const messagesDiv = document.getElementById("messages");
-    const input = document.getElementById("message-input");
-    const sendBtn = document.getElementById("send-button");
+    renderTests();
+    form.reset();
+  });
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (text === "") return;
+  // Initial rendering
+  renderTests();
+</script>
 
-      try {
-        await db.collection("messages").add({
-          text: text,
-          username: username,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        input.value = "";
-      } catch (error) {
-        console.error("Error sending message: ", error);
-      }
-    }
-
-    sendBtn.addEventListener("click", sendMessage);
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") sendMessage();
-    });
-
-    // Real-time listener
-    db.collection("messages")
-      .orderBy("timestamp", "asc")
-      .onSnapshot(snapshot => {
-        messagesDiv.innerHTML = "";
-        snapshot.forEach(doc => {
-          const msg = doc.data();
-          const div = document.createElement("div");
-          div.classList.add("message");
-          div.classList.add(msg.username === username ? "sent" : "received");
-          div.innerHTML = `<b>${msg.username || "Anonymous"}:</b> ${msg.text}`;
-          messagesDiv.appendChild(div);
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      });
-  </script>
 </body>
 </html>
