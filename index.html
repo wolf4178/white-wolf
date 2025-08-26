@@ -32,14 +32,21 @@
     border: 1px solid #ccc;
     box-sizing: border-box;
   }
-  button {
+  button, .action-btn {
     margin-top: 15px;
     background-color: #007bff;
     border: none;
     color: white;
-    padding: 10px 15px;
+    padding: 8px 12px;
     cursor: pointer;
     border-radius: 4px;
+  }
+  .action-btn {
+    margin: 0 3px;
+    padding: 4px 8px;
+  }
+  button:hover, .action-btn:hover {
+    background-color: #0056b3;
   }
   table {
     width: 100%;
@@ -56,6 +63,65 @@
     background-color: #007bff;
     color: white;
   }
+  #summary {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 600px;
+    margin-top: 10px;
+  }
+  #searchInput {
+    width: 100%;
+    max-width: 600px;
+    padding: 7px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    table, thead, tbody, th, td, tr {
+      display: block;
+    }
+    thead tr {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+    }
+    tr {
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      padding: 10px;
+      background: white;
+    }
+    td {
+      border: none;
+      padding-left: 50%;
+      position: relative;
+      text-align: left;
+    }
+    td::before {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      width: 45%;
+      white-space: nowrap;
+      font-weight: bold;
+      color: #007bff;
+    }
+    td:nth-of-type(1)::before { content: "Platform"; }
+    td:nth-of-type(2)::before { content: "Date"; }
+    td:nth-of-type(3)::before { content: "Total Score"; }
+    td:nth-of-type(4)::before { content: "Quant Score"; }
+    td:nth-of-type(5)::before { content: "Reasoning Score"; }
+    td:nth-of-type(6)::before { content: "English Score"; }
+    td:nth-of-type(7)::before { content: "Percentile"; }
+    td:nth-of-type(8)::before { content: "Accuracy"; }
+    td:nth-of-type(9)::before { content: "Actions"; }
+  }
 </style>
 </head>
 <body>
@@ -63,6 +129,7 @@
 <h1>Bank PO Mock Test Tracker</h1>
 
 <form id="mockTestForm">
+  <input type="hidden" id="editIndex" value="-1" />
   <label for="platform">Test Platform (e.g., Testbook, Guidely)</label>
   <input type="text" id="platform" name="platform" required />
 
@@ -87,8 +154,10 @@
   <label for="accuracy">Accuracy (%)</label>
   <input type="number" id="accuracy" name="accuracy" min="0" max="100" step="0.01" required />
 
-  <button type="submit">Add Test</button>
+  <button type="submit">Save Test</button>
 </form>
+
+<input type="text" id="searchInput" placeholder="Search by Platform..." />
 
 <table id="testsTable">
   <thead>
@@ -101,22 +170,37 @@
       <th>English Score</th>
       <th>Percentile</th>
       <th>Accuracy (%)</th>
+      <th>Actions</th>
     </tr>
   </thead>
-  <tbody>
-  </tbody>
+  <tbody></tbody>
 </table>
+
+<div id="summary">
+  <h3>Summary</h3>
+  <p id="avgScore">Average Total Score: N/A</p>
+  <p id="maxPercentile">Highest Percentile: N/A</p>
+  <p id="avgAccuracy">Average Accuracy: N/A</p>
+</div>
 
 <script>
   const form = document.getElementById('mockTestForm');
+  const editIndexInput = document.getElementById('editIndex');
   const tableBody = document.querySelector('#testsTable tbody');
+  const searchInput = document.getElementById('searchInput');
+  const avgScoreEl = document.getElementById('avgScore');
+  const maxPercentileEl = document.getElementById('maxPercentile');
+  const avgAccuracyEl = document.getElementById('avgAccuracy');
 
-  // Load existing tests from localStorage
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
 
-  function renderTests() {
+  function renderTests(filter = '') {
     tableBody.innerHTML = '';
-    tests.forEach(test => {
+    const filteredTests = tests.filter(t =>
+      t.platform.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    filteredTests.forEach((test, index) => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${test.platform}</td>
@@ -127,14 +211,35 @@
         <td>${test.englishScore}</td>
         <td>${test.percentile}</td>
         <td>${test.accuracy}</td>
+        <td>
+          <button class="action-btn" onclick="startEdit(${index})">Edit</button>
+          <button class="action-btn" onclick="deleteTest(${index})">Delete</button>
+        </td>
       `;
       tableBody.appendChild(row);
     });
+
+    updateSummary(filteredTests);
+  }
+
+  function updateSummary(data) {
+    if (data.length === 0) {
+      avgScoreEl.textContent = 'Average Total Score: N/A';
+      maxPercentileEl.textContent = 'Highest Percentile: N/A';
+      avgAccuracyEl.textContent = 'Average Accuracy: N/A';
+      return;
+    }
+    const avgScore = (data.reduce((sum, t) => sum + t.totalScore, 0) / data.length).toFixed(2);
+    const maxPercentile = Math.max(...data.map(t => t.percentile));
+    const avgAccuracy = (data.reduce((sum, t) => sum + t.accuracy, 0) / data.length).toFixed(2);
+
+    avgScoreEl.textContent = `Average Total Score: ${avgScore}`;
+    maxPercentileEl.textContent = `Highest Percentile: ${maxPercentile}`;
+    avgAccuracyEl.textContent = `Average Accuracy: ${avgAccuracy}`;
   }
 
   form.addEventListener('submit', e => {
     e.preventDefault();
-
     const testData = {
       platform: form.platform.value.trim(),
       date: form.date.value,
@@ -146,14 +251,48 @@
       accuracy: Number(form.accuracy.value)
     };
 
-    tests.push(testData);
-    localStorage.setItem('mockTests', JSON.stringify(tests));
+    const editIdx = Number(editIndexInput.value);
+    if (editIdx === -1) {
+      tests.push(testData);
+    } else {
+      tests[editIdx] = testData;
+      editIndexInput.value = -1;
+      form.querySelector('button[type="submit"]').textContent = 'Save Test';
+    }
 
-    renderTests();
+    localStorage.setItem('mockTests', JSON.stringify(tests));
     form.reset();
+    renderTests(searchInput.value);
   });
 
-  // Initial rendering
+  function startEdit(index) {
+    const test = tests[index];
+    form.platform.value = test.platform;
+    form.date.value = test.date;
+    form.totalScore.value = test.totalScore;
+    form.quantScore.value = test.quantScore;
+    form.reasoningScore.value = test.reasoningScore;
+    form.englishScore.value = test.englishScore;
+    form.percentile.value = test.percentile;
+    form.accuracy.value = test.accuracy;
+    editIndexInput.value = index;
+    form.querySelector('button[type="submit"]').textContent = 'Update Test';
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  function deleteTest(index) {
+    if (confirm('Are you sure you want to delete this test?')) {
+      tests.splice(index, 1);
+      localStorage.setItem('mockTests', JSON.stringify(tests));
+      renderTests(searchInput.value);
+    }
+  }
+
+  searchInput.addEventListener('input', () => {
+    renderTests(searchInput.value);
+  });
+
+  // Initial render
   renderTests();
 </script>
 
