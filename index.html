@@ -8,33 +8,49 @@
   body {
     font-family: Arial, sans-serif;
     margin: 20px;
-    background: #f0f8ff;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.3s, color 0.3s;
+  }
+  :root {
+    --bg-color: #f0f8ff;
+    --text-color: #000;
+    --table-bg: #fff;
+    --header-bg: #007bff;
+  }
+  .dark {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --table-bg: #1e1e1e;
+    --header-bg: #1a73e8;
   }
   h1 {
-    color: #007bff;
+    color: var(--header-bg);
   }
   form {
-    background: white;
+    background: var(--table-bg);
     padding: 15px;
     border-radius: 8px;
-    max-width: 600px;
+    max-width: 700px;
     margin-bottom: 20px;
   }
   label {
     display: block;
     margin-top: 10px;
   }
-  input, select {
+  input, select, textarea {
     width: 100%;
     padding: 7px;
     margin-top: 5px;
     border-radius: 4px;
     border: 1px solid #ccc;
     box-sizing: border-box;
+    background: var(--table-bg);
+    color: var(--text-color);
   }
   button, .action-btn {
     margin-top: 15px;
-    background-color: #007bff;
+    background-color: var(--header-bg);
     border: none;
     color: white;
     padding: 8px 12px;
@@ -51,7 +67,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
+    background: var(--table-bg);
     border-radius: 8px;
   }
   th, td {
@@ -60,73 +76,41 @@
     text-align: center;
   }
   th {
-    background-color: #007bff;
+    background-color: var(--header-bg);
     color: white;
+    cursor: pointer;
   }
   #summary {
-    background: white;
+    background: var(--table-bg);
     padding: 15px;
     border-radius: 8px;
-    max-width: 600px;
+    max-width: 700px;
     margin-top: 10px;
   }
   #searchInput {
     width: 100%;
-    max-width: 600px;
+    max-width: 700px;
     padding: 7px;
     margin-bottom: 10px;
     border-radius: 4px;
     border: 1px solid #ccc;
     box-sizing: border-box;
+    background: var(--table-bg);
+    color: var(--text-color);
   }
-
-  /* Responsive */
-  @media (max-width: 640px) {
-    table, thead, tbody, th, td, tr {
-      display: block;
-    }
-    thead tr {
-      position: absolute;
-      top: -9999px;
-      left: -9999px;
-    }
-    tr {
-      border: 1px solid #ccc;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      padding: 10px;
-      background: white;
-    }
-    td {
-      border: none;
-      padding-left: 50%;
-      position: relative;
-      text-align: left;
-    }
-    td::before {
-      position: absolute;
-      top: 8px;
-      left: 10px;
-      width: 45%;
-      white-space: nowrap;
-      font-weight: bold;
-      color: #007bff;
-    }
-    td:nth-of-type(1)::before { content: "Platform"; }
-    td:nth-of-type(2)::before { content: "Date"; }
-    td:nth-of-type(3)::before { content: "Total Score"; }
-    td:nth-of-type(4)::before { content: "Quant Score"; }
-    td:nth-of-type(5)::before { content: "Reasoning Score"; }
-    td:nth-of-type(6)::before { content: "English Score"; }
-    td:nth-of-type(7)::before { content: "Percentile"; }
-    td:nth-of-type(8)::before { content: "Accuracy"; }
-    td:nth-of-type(9)::before { content: "Actions"; }
+  .improved {
+    background-color: #d4edda !important;
+  }
+  #darkModeToggle {
+    margin-bottom: 20px;
   }
 </style>
 </head>
 <body>
 
 <h1>Bank PO Mock Test Tracker</h1>
+
+<label><input type="checkbox" id="darkModeToggle" /> Dark Mode</label>
 
 <form id="mockTestForm">
   <input type="hidden" id="editIndex" value="-1" />
@@ -154,10 +138,17 @@
   <label for="accuracy">Accuracy (%)</label>
   <input type="number" id="accuracy" name="accuracy" min="0" max="100" step="0.01" required />
 
+  <label for="notes">Notes (optional)</label>
+  <textarea id="notes" name="notes" rows="2"></textarea>
+
   <button type="submit">Save Test</button>
 </form>
 
 <input type="text" id="searchInput" placeholder="Search by Platform..." />
+
+<button id="sortDateBtn">Sort by Date ↓</button>
+<button id="exportBtn">Export Data</button>
+<input type="file" id="importFile" style="display:none" />
 
 <table id="testsTable">
   <thead>
@@ -170,6 +161,7 @@
       <th>English Score</th>
       <th>Percentile</th>
       <th>Accuracy (%)</th>
+      <th>Notes</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -191,17 +183,42 @@
   const avgScoreEl = document.getElementById('avgScore');
   const maxPercentileEl = document.getElementById('maxPercentile');
   const avgAccuracyEl = document.getElementById('avgAccuracy');
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  const sortDateBtn = document.getElementById('sortDateBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const importFile = document.getElementById('importFile');
 
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
+  let sortAscending = true;
+
+  // Dark mode toggle
+  darkModeToggle.addEventListener('change', () => {
+    if (darkModeToggle.checked) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  });
 
   function renderTests(filter = '') {
     tableBody.innerHTML = '';
-    const filteredTests = tests.filter(t =>
-      t.platform.toLowerCase().includes(filter.toLowerCase())
-    );
+    const filteredTests = tests
+      .filter(t => t.platform.toLowerCase().includes(filter.toLowerCase()))
+      .sort((a, b) => sortAscending
+        ? new Date(a.date) - new Date(b.date)
+        : new Date(b.date) - new Date(a.date));
 
-    filteredTests.forEach((test, index) => {
+    for (let i = 0; i < filteredTests.length; i++) {
+      const test = filteredTests[i];
       const row = document.createElement('tr');
+
+      // Highlight if totalScore improved over previous test
+      let improvedClass = '';
+      if (i > 0 && test.totalScore > filteredTests[i - 1].totalScore) {
+        improvedClass = 'improved';
+      }
+
+      row.className = improvedClass;
       row.innerHTML = `
         <td>${test.platform}</td>
         <td>${test.date}</td>
@@ -211,13 +228,14 @@
         <td>${test.englishScore}</td>
         <td>${test.percentile}</td>
         <td>${test.accuracy}</td>
+        <td>${test.notes ? test.notes.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}</td>
         <td>
-          <button class="action-btn" onclick="startEdit(${index})">Edit</button>
-          <button class="action-btn" onclick="deleteTest(${index})">Delete</button>
+          <button class="action-btn" onclick="startEdit(${tests.indexOf(test)})">Edit</button>
+          <button class="action-btn" onclick="deleteTest(${tests.indexOf(test)})">Delete</button>
         </td>
       `;
       tableBody.appendChild(row);
-    });
+    }
 
     updateSummary(filteredTests);
   }
@@ -248,7 +266,8 @@
       reasoningScore: Number(form.reasoningScore.value),
       englishScore: Number(form.englishScore.value),
       percentile: Number(form.percentile.value),
-      accuracy: Number(form.accuracy.value)
+      accuracy: Number(form.accuracy.value),
+      notes: form.notes.value.trim()
     };
 
     const editIdx = Number(editIndexInput.value);
@@ -275,6 +294,7 @@
     form.englishScore.value = test.englishScore;
     form.percentile.value = test.percentile;
     form.accuracy.value = test.accuracy;
+    form.notes.value = test.notes || '';
     editIndexInput.value = index;
     form.querySelector('button[type="submit"]').textContent = 'Update Test';
     window.scrollTo({top: 0, behavior: 'smooth'});
@@ -291,6 +311,50 @@
   searchInput.addEventListener('input', () => {
     renderTests(searchInput.value);
   });
+
+  sortDateBtn.addEventListener('click', () => {
+    sortAscending = !sortAscending;
+    sortDateBtn.textContent = sortAscending ? 'Sort by Date ↓' : 'Sort by Date ↑';
+    renderTests(searchInput.value);
+  });
+
+  exportBtn.addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tests));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", "bank_po_mock_tests.json");
+    dlAnchorElem.click();
+  });
+
+  importFile.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (Array.isArray(imported)) {
+          tests = imported;
+          localStorage.setItem('mockTests', JSON.stringify(tests));
+          renderTests(searchInput.value);
+          alert('Data imported successfully!');
+        } else {
+          alert('Invalid data format.');
+        }
+      } catch (error) {
+        alert('Error parsing file: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Add import button functionality
+  const importBtn = document.createElement('button');
+  importBtn.textContent = 'Import Data';
+  importBtn.className = 'action-btn';
+  importBtn.style.marginLeft = '10px';
+  exportBtn.insertAdjacentElement('afterend', importBtn);
+  importBtn.addEventListener('click', () => importFile.click());
 
   // Initial render
   renderTests();
