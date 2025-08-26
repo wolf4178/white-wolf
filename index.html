@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bank PO Mock Test Tracker with Chart</title>
+<title>Bank PO Mock Test Tracker with Chart and AI Insights</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   :root {
@@ -351,6 +350,25 @@
     color: var(--secondary);
   }
   
+  /* AI Insights Section */
+  #aiInsights {
+    background-color: #e3f2fd;
+    border: 2px solid var(--primary);
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+  #aiInsights h2 {
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  #aiInsights p {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
   @media (max-width: 768px) {
     .grid {
       grid-template-columns: 1fr;
@@ -494,6 +512,12 @@
           <p id="avgPercentile">N/A</p>
         </div>
       </div>
+    </div>
+
+    <!-- AI Insights Card Added -->
+    <div class="card" id="aiInsights">
+      <h2>AI Performance Insights</h2>
+      <p id="insightMessage">Add some test results to get personalized insights.</p>
     </div>
   </div>
 
@@ -659,6 +683,7 @@
   const goalProgressBar = document.getElementById('goalProgressBar');
   const currentScore = document.getElementById('currentScore');
   const goalText = document.getElementById('goalText');
+  const insightMessage = document.getElementById('insightMessage');
 
   // Data and Charts
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
@@ -672,6 +697,7 @@
     setupEventListeners();
     setDefaultDate();
     updateGoalProgress();
+    updateAIInsights();
   }
 
   // Set default date to today
@@ -683,21 +709,43 @@
   // Setup event listeners
   function setupEventListeners() {
     form.addEventListener('submit', saveTest);
-    searchInput.addEventListener('input', () => renderTests());
+    searchInput.addEventListener('input', () => {
+      renderTests();
+      updateAIInsights();
+    });
     clearSearchBtn.addEventListener('click', () => {
       searchInput.value = '';
       renderTests();
+      updateAIInsights();
     });
-    dateFrom.addEventListener('change', () => renderTests());
-    dateTo.addEventListener('change', () => renderTests());
-    platformFilter.addEventListener('change', () => renderTests());
-    sortBy.addEventListener('change', () => renderTests());
+    dateFrom.addEventListener('change', () => {
+      renderTests();
+      updateAIInsights();
+    });
+    dateTo.addEventListener('change', () => {
+      renderTests();
+      updateAIInsights();
+    });
+    platformFilter.addEventListener('change', () => {
+      renderTests();
+      updateAIInsights();
+    });
+    sortBy.addEventListener('change', () => {
+      renderTests();
+      updateAIInsights();
+    });
     exportCSVBtn.addEventListener('click', exportToCSV);
     exportJSONBtn.addEventListener('click', exportToJSON);
     importBtn.addEventListener('click', () => importFile.click());
     importFile.addEventListener('change', importData);
-    clearAllBtn.addEventListener('click', clearAllData);
-    cancelEditBtn.addEventListener('click', cancelEdit);
+    clearAllBtn.addEventListener('click', () => {
+      clearAllData();
+      updateAIInsights();
+    });
+    cancelEditBtn.addEventListener('click', () => {
+      cancelEdit();
+      updateAIInsights();
+    });
     setGoalBtn.addEventListener('click', setScoreGoal);
     
     // Tab functionality
@@ -1185,6 +1233,7 @@
     setDefaultDate();
     renderTests();
     updatePlatformFilter();
+    updateAIInsights();
   }
 
   // Edit test function
@@ -1226,6 +1275,7 @@
       localStorage.setItem('mockTests', JSON.stringify(tests));
       renderTests();
       updatePlatformFilter();
+      updateAIInsights();
     }
   }
 
@@ -1315,6 +1365,7 @@
           localStorage.setItem('mockTests', JSON.stringify(tests));
           renderTests();
           updatePlatformFilter();
+          updateAIInsights();
           alert('Data imported successfully!');
         }
       } catch (error) {
@@ -1343,6 +1394,53 @@
     }
   }
 
+  // New AI insights function
+  function updateAIInsights() {
+    const filteredTests = getFilteredTests();
+    if (filteredTests.length === 0) {
+      insightMessage.textContent = 'Add some test results to get personalized insights.';
+      return;
+    }
+
+    // Calculate average scores
+    const avgQuant = filteredTests.reduce((sum, t) => sum + t.quantScore, 0) / filteredTests.length;
+    const avgReasoning = filteredTests.reduce((sum, t) => sum + t.reasoningScore, 0) / filteredTests.length;
+    const avgEnglish = filteredTests.reduce((sum, t) => sum + t.englishScore, 0) / filteredTests.length;
+
+    // Identify weakest section
+    let weakestSection = 'Quantitative';
+    let lowestAvg = avgQuant;
+
+    if (avgReasoning < lowestAvg) {
+      weakestSection = 'Reasoning';
+      lowestAvg = avgReasoning;
+    }
+    if (avgEnglish < lowestAvg) {
+      weakestSection = 'English';
+      lowestAvg = avgEnglish;
+    }
+
+    // Generate simple tips
+    const tips = {
+      'Quantitative': 'Practice shortcut math techniques, and focus on data interpretation questions.',
+      'Reasoning': 'Work on puzzle-solving strategies and critical thinking exercises.',
+      'English': 'Improve vocabulary and reading comprehension through daily practice.'
+    };
+
+    const latestTest = filteredTests.reduce((latest, test) => {
+      return new Date(test.date) > new Date(latest.date) ? test : latest;
+    }, filteredTests[0]);
+
+    const encouragement = latestTest.totalScore >= (scoreGoal || 0) ? 'Great job on reaching your goal!' : 'Keep pushing to improve your scores!';
+
+    insightMessage.innerHTML = `
+      <p><strong>Weakest Section:</strong> ${weakestSection} (Average Score: ${lowestAvg.toFixed(2)})</p>
+      <p><strong>Tip:</strong> ${tips[weakestSection]}</p>
+      <p><strong>Latest Test Score:</strong> ${latestTest.totalScore}</p>
+      <p><em>${encouragement}</em></p>
+    `;
+  }
+  
   // Initialize the application
   init();
 </script>
