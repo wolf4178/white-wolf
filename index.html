@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Bank PO Mock Test Tracker with Chart</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <style>
   :root {
     --primary: #007bff;
@@ -13,12 +12,11 @@
     --secondary: #6c757d;
     --success: #28a745;
     --danger: #dc3545;
-    --warning: #ffc107;
-    --light: #f8f9fa;
-    --dark: #343a40;
     --background: #f0f8ff;
     --card-bg: #ffffff;
     --border: #dee2e6;
+    --text-dark: #333;
+    --text-light: #fff;
   }
   
   * {
@@ -29,10 +27,9 @@
   
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 20px;
     background: var(--background);
-    color: #333;
+    color: var(--text-dark);
+    padding: 20px;
     line-height: 1.6;
   }
   
@@ -85,7 +82,7 @@
     display: block;
     margin-bottom: 5px;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-dark);
   }
   
   input, select, textarea {
@@ -95,6 +92,8 @@
     border-radius: 5px;
     font-size: 16px;
     transition: border-color 0.3s;
+    background: var(--card-bg);
+    color: var(--text-dark);
   }
   
   input:focus, select:focus, textarea:focus {
@@ -106,7 +105,7 @@
   button {
     background-color: var(--primary);
     border: none;
-    color: white;
+    color: var(--text-light);
     padding: 10px 15px;
     cursor: pointer;
     border-radius: 5px;
@@ -155,16 +154,19 @@
     display: flex;
     gap: 10px;
     margin-top: 20px;
+    flex-wrap: wrap;
   }
   
   .search-container {
     display: flex;
     margin-bottom: 20px;
     gap: 10px;
+    flex-wrap: wrap;
   }
   
   .search-container input {
     flex: 1;
+    min-width: 200px;
   }
   
   .filters {
@@ -189,7 +191,6 @@
     border-collapse: collapse;
     background: var(--card-bg);
     border-radius: 10px;
-    overflow: hidden;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   }
   
@@ -201,10 +202,11 @@
   
   th {
     background-color: var(--primary);
-    color: white;
+    color: var(--text-light);
     font-weight: 600;
     position: sticky;
     top: 0;
+    z-index: 1;
   }
   
   tr:nth-child(even) {
@@ -274,6 +276,7 @@
     border-bottom: none;
     border-radius: 5px 5px 0 0;
     margin-right: 5px;
+    user-select: none;
   }
   
   .tab.active {
@@ -294,6 +297,7 @@
     display: flex;
     gap: 10px;
     margin-top: 20px;
+    flex-wrap: wrap;
   }
   
   .empty-state {
@@ -341,7 +345,7 @@
   <div class="grid">
     <div class="card">
       <h2>Add New Test Result</h2>
-      <form id="mockTestForm">
+      <form id="mockTestForm" autocomplete="off" novalidate>
         <input type="hidden" id="editIndex" value="-1" />
         
         <div class="form-group">
@@ -450,8 +454,8 @@
     
     <div class="search-container">
       <input type="text" id="searchInput" placeholder="Search by platform, notes..." />
-      <button type="button" id="clearSearchBtn" class="secondary">
-        <i class="fas fa-times"></i> Clear
+      <button type="button" id="clearSearchBtn" class="secondary" title="Clear Search">
+        <i class="fas fa-times"></i>
       </button>
     </div>
     
@@ -510,16 +514,16 @@
     </div>
     
     <div class="export-options">
-      <button type="button" id="exportCSVBtn" class="secondary">
+      <button type="button" id="exportCSVBtn" class="secondary" title="Export data as CSV">
         <i class="fas fa-file-csv"></i> Export to CSV
       </button>
-      <button type="button" id="exportJSONBtn" class="secondary">
+      <button type="button" id="exportJSONBtn" class="secondary" title="Export data as JSON">
         <i class="fas fa-file-code"></i> Export to JSON
       </button>
-      <button type="button" id="importBtn" class="secondary">
+      <button type="button" id="importBtn" class="secondary" title="Import data from CSV or JSON">
         <i class="fas fa-file-import"></i> Import Data
       </button>
-      <button type="button" id="clearAllBtn" class="danger">
+      <button type="button" id="clearAllBtn" class="danger" title="Delete all test data">
         <i class="fas fa-trash"></i> Clear All Data
       </button>
     </div>
@@ -554,12 +558,12 @@
   </div>
 </div>
 
-<input type="file" id="importFile" accept=".json,.csv" style="display: none;" />
+<input type="file" id="importFile" accept=".json,.csv" style="display:none" />
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
 <script>
-  // DOM Elements
+  // DOM references
   const form = document.getElementById('mockTestForm');
   const tableBody = document.querySelector('#testsTable tbody');
   const searchInput = document.getElementById('searchInput');
@@ -579,130 +583,109 @@
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
 
-  // Data and Charts
+  // Data and chart variables
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
   let scoreChart, sectionChart, accuracyChart;
 
-  // Initialize the application
+  // Initialize app
   function init() {
+    populatePlatformFilter();
+    bindListeners();
+    resetForm();
     renderTests();
-    updatePlatformFilter();
-    setupEventListeners();
-    setDefaultDate();
   }
 
-  // Set default date to today
-  function setDefaultDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
-  }
-
-  // Setup event listeners
-  function setupEventListeners() {
+  function bindListeners() {
     form.addEventListener('submit', saveTest);
-    searchInput.addEventListener('input', () => renderTests());
+    searchInput.addEventListener('input', renderTests);
     clearSearchBtn.addEventListener('click', () => {
       searchInput.value = '';
       renderTests();
     });
-    dateFrom.addEventListener('change', () => renderTests());
-    dateTo.addEventListener('change', () => renderTests());
-    platformFilter.addEventListener('change', () => renderTests());
-    sortBy.addEventListener('change', () => renderTests());
+    dateFrom.addEventListener('change', renderTests);
+    dateTo.addEventListener('change', renderTests);
+    platformFilter.addEventListener('change', renderTests);
+    sortBy.addEventListener('change', renderTests);
     exportCSVBtn.addEventListener('click', exportToCSV);
     exportJSONBtn.addEventListener('click', exportToJSON);
     importBtn.addEventListener('click', () => importFile.click());
     importFile.addEventListener('change', importData);
     clearAllBtn.addEventListener('click', clearAllData);
-    cancelEditBtn.addEventListener('click', cancelEdit);
-    
-    // Tab functionality
+    cancelEditBtn.addEventListener('click', resetForm);
+
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        const tabId = tab.getAttribute('data-tab');
-        
-        // Update active tab
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        
-        // Show corresponding content
-        tabContents.forEach(content => {
-          content.classList.remove('active');
-          if (content.id === `${tabId}-tab`) {
-            content.classList.add('active');
-          }
-        });
-        
-        // Render chart for the active tab if needed
-        if (tabId === 'section-wise' && tests.length > 0) {
-          renderSectionChart(getFilteredTests());
-        } else if (tabId === 'accuracy' && tests.length > 0) {
-          renderAccuracyChart(getFilteredTests());
-        }
+        const activeTab = tab.getAttribute('data-tab');
+        tabContents.forEach(tc => tc.classList.remove('active'));
+        document.getElementById(activeTab + '-tab').classList.add('active');
+
+        if (activeTab === 'section-wise') renderSectionChart(getFilteredTests());
+        else if (activeTab === 'accuracy') renderAccuracyChart(getFilteredTests());
+        else renderScoreChart(getFilteredTests());
       });
     });
   }
 
-  // Get filtered tests based on search and filters
-  function getFilteredTests() {
-    let filteredTests = [...tests];
-    const searchTerm = searchInput.value.toLowerCase();
-    
-    // Apply search filter
-    if (searchTerm) {
-      filteredTests = filteredTests.filter(t => 
-        t.platform.toLowerCase().includes(searchTerm) || 
-        (t.notes && t.notes.toLowerCase().includes(searchTerm))
-      );
-    }
-    
-    // Apply date filter
-    if (dateFrom.value) {
-      filteredTests = filteredTests.filter(t => t.date >= dateFrom.value);
-    }
-    
-    if (dateTo.value) {
-      filteredTests = filteredTests.filter(t => t.date <= dateTo.value);
-    }
-    
-    // Apply platform filter
-    if (platformFilter.value) {
-      filteredTests = filteredTests.filter(t => t.platform === platformFilter.value);
-    }
-    
-    // Apply sorting
-    const sortValue = sortBy.value;
-    filteredTests.sort((a, b) => {
-      switch(sortValue) {
-        case 'date':
-          return new Date(a.date) - new Date(b.date);
-        case 'date-desc':
-          return new Date(b.date) - new Date(a.date);
-        case 'totalScore':
-          return a.totalScore - b.totalScore;
-        case 'totalScore-desc':
-          return b.totalScore - a.totalScore;
-        case 'platform':
-          return a.platform.localeCompare(b.platform);
-        default:
-          return 0;
-      }
-    });
-    
-    return filteredTests;
+  // Utility: format date as readable string
+  function formatDate(dateStr) {
+    const options = {year:'numeric', month:'short', day:'numeric'};
+    return new Date(dateStr).toLocaleDateString(undefined, options);
   }
 
-  // Render tests table
+  // Reset form for adding new entry
+  function resetForm() {
+    form.reset();
+    form.editIndex.value = '-1';
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Test';
+    cancelEditBtn.style.display = 'none';
+    setDefaultDate();
+  }
+
+  // Set the date input default to today
+  function setDefaultDate() {
+    form.date.value = new Date().toISOString().substr(0,10);
+  }
+
+  // Save or update test
+  function saveTest(e) {
+    e.preventDefault();
+    const newTest = {
+      platform: form.platform.value.trim(),
+      date: form.date.value,
+      totalScore: Number(form.totalScore.value),
+      quantScore: Number(form.quantScore.value),
+      reasoningScore: Number(form.reasoningScore.value),
+      englishScore: Number(form.englishScore.value),
+      percentile: Number(form.percentile.value),
+      accuracy: Number(form.accuracy.value),
+      notes: form.notes.value.trim()
+    };
+
+    const idx = parseInt(form.editIndex.value);
+    if (idx >= 0) {
+      tests[idx] = newTest;
+    } else {
+      tests.push(newTest);
+    }
+
+    localStorage.setItem('mockTests', JSON.stringify(tests));
+    resetForm();
+    populatePlatformFilter();
+    renderTests();
+  }
+
+  // Render test data table with filters and sorting
   function renderTests() {
     const filteredTests = getFilteredTests();
     tableBody.innerHTML = '';
-    
+
     if (filteredTests.length === 0) {
       emptyState.style.display = 'block';
-      tableBody.innerHTML = '';
     } else {
       emptyState.style.display = 'none';
-      filteredTests.forEach((test, index) => {
+      filteredTests.forEach((test, idx) => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${test.platform}</td>
@@ -714,91 +697,223 @@
           <td>${test.percentile}%</td>
           <td>${test.accuracy}%</td>
           <td class="action-cell">
-            <button class="action-btn secondary" onclick="editTest(${index})">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="action-btn danger" onclick="deleteTest(${index})">
-              <i class="fas fa-trash"></i>
-            </button>
+            <button class="action-btn secondary" onclick="editTest(${idx})" title="Edit Test"><i class="fas fa-edit"></i></button>
+            <button class="action-btn danger" onclick="deleteTest(${idx})" title="Delete Test"><i class="fas fa-trash"></i></button>
           </td>
         `;
         tableBody.appendChild(row);
       });
     }
-    
+
     updateSummary(filteredTests);
-    renderScoreChart(filteredTests);
+    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    if (activeTab === 'section-wise') renderSectionChart(filteredTests);
+    else if (activeTab === 'accuracy') renderAccuracyChart(filteredTests);
+    else renderScoreChart(filteredTests);
   }
 
-  // Format date for display
-  function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  }
-
-  // Update platform filter options
-  function updatePlatformFilter() {
-    // Get unique platforms
-    const platforms = [...new Set(tests.map(test => test.platform))];
-    
-    // Clear existing options except the first one
-    while (platformFilter.options.length > 1) {
-      platformFilter.remove(1);
+  // Get tests after filtering and sorting
+  function getFilteredTests() {
+    let filtered = [...tests];
+    const search = searchInput.value.toLowerCase();
+    if (search) {
+      filtered = filtered.filter(t =>
+        t.platform.toLowerCase().includes(search) ||
+        (t.notes && t.notes.toLowerCase().includes(search))
+      );
     }
-    
-    // Add platform options
-    platforms.forEach(platform => {
-      const option = document.createElement('option');
-      option.value = platform;
-      option.textContent = platform;
-      platformFilter.appendChild(option);
+    if (dateFrom.value) filtered = filtered.filter(t => t.date >= dateFrom.value);
+    if (dateTo.value) filtered = filtered.filter(t => t.date <= dateTo.value);
+    if (platformFilter.value) filtered = filtered.filter(t => t.platform === platformFilter.value);
+
+    switch (sortBy.value) {
+      case 'date': filtered.sort((a,b) => new Date(a.date)-new Date(b.date)); break;
+      case 'date-desc': filtered.sort((a,b) => new Date(b.date)-new Date(a.date)); break;
+      case 'totalScore': filtered.sort((a,b) => a.totalScore - b.totalScore); break;
+      case 'totalScore-desc': filtered.sort((a,b) => b.totalScore - a.totalScore); break;
+      case 'platform': filtered.sort((a,b) => a.platform.localeCompare(b.platform)); break;
+    }
+
+    return filtered;
+  }
+
+  // Update performance summary cards
+  function updateSummary(data) {
+    const count = data.length;
+    document.getElementById('testsCount').textContent = count;
+    if (count === 0) {
+      setSummaryNAs();
+      return;
+    }
+    document.getElementById('avgTotal').textContent = (data.reduce((a,b) => a + b.totalScore,0)/count).toFixed(2);
+    document.getElementById('avgQuant').textContent = (data.reduce((a,b) => a + b.quantScore,0)/count).toFixed(2);
+    document.getElementById('avgReasoning').textContent = (data.reduce((a,b) => a + b.reasoningScore,0)/count).toFixed(2);
+    document.getElementById('avgEnglish').textContent = (data.reduce((a,b) => a + b.englishScore,0)/count).toFixed(2);
+    document.getElementById('bestTotal').textContent = Math.max(...data.map(d => d.totalScore));
+    document.getElementById('avgAccuracy').textContent = (data.reduce((a,b) => a + b.accuracy,0)/count).toFixed(2) + '%';
+    document.getElementById('avgPercentile').textContent = (data.reduce((a,b) => a + b.percentile,0)/count).toFixed(2) + '%';
+  }
+
+  function setSummaryNAs() {
+    ['avgTotal','avgQuant','avgReasoning','avgEnglish','bestTotal','avgAccuracy','avgPercentile']
+    .forEach(id => document.getElementById(id).textContent = 'N/A');
+    document.getElementById('testsCount').textContent = '0';
+  }
+
+  // Edit test record
+  function editTest(index) {
+    const test = tests[index];
+    form.platform.value = test.platform;
+    form.date.value = test.date;
+    form.totalScore.value = test.totalScore;
+    form.quantScore.value = test.quantScore;
+    form.reasoningScore.value = test.reasoningScore;
+    form.englishScore.value = test.englishScore;
+    form.percentile.value = test.percentile;
+    form.accuracy.value = test.accuracy;
+    form.notes.value = test.notes || '';
+    form.editIndex.value = index;
+    submitBtn.innerHTML = '<i class="fas fa-edit"></i> Update Test';
+    cancelEditBtn.style.display = 'inline-flex';
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Delete a test record
+  function deleteTest(index) {
+    if (confirm('Are you sure you want to delete this test?')) {
+      tests.splice(index, 1);
+      localStorage.setItem('mockTests', JSON.stringify(tests));
+      renderTests();
+      populatePlatformFilter();
+    }
+  }
+
+  // Export data as CSV
+  function exportToCSV() {
+    if (tests.length === 0) {
+      alert('No data to export!');
+      return;
+    }
+    const csvHeader = ['platform','date','totalScore','quantScore','reasoningScore','englishScore','percentile','accuracy','notes'];
+    const csvRows = [csvHeader];
+    tests.forEach(t => {
+      csvRows.push([
+        t.platform,
+        t.date,
+        t.totalScore,
+        t.quantScore,
+        t.reasoningScore,
+        t.englishScore,
+        t.percentile,
+        t.accuracy,
+        `"${(t.notes || '').replace(/"/g,'""')}"`
+      ]);
+    });
+    const csvString = csvRows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvString], {type: 'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    link.href = URL.createObjectURL(blob);
+    link.download = `bankpo_mock_tests_${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Export data as JSON
+  function exportToJSON() {
+    if (tests.length === 0) {
+      alert('No data to export!');
+      return;
+    }
+    const dataStr = JSON.stringify(tests, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const link = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    link.href = URL.createObjectURL(blob);
+    link.download = `bankpo_mock_tests_${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Import data from JSON or CSV
+  function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        let importedData;
+        if (file.name.endsWith('.json')) {
+          importedData = JSON.parse(event.target.result);
+        } else if (file.name.endsWith('.csv')) {
+          importedData = Papa.parse(event.target.result, {header:true, dynamicTyping:true}).data;
+        } else {
+          throw new Error('Unsupported file type');
+        }
+        if (!Array.isArray(importedData)) throw new Error('Invalid data format');
+        // Basic validation
+        const requiredKeys = ['platform','date','totalScore','quantScore','reasoningScore','englishScore','percentile','accuracy'];
+        const validData = importedData.every(item => requiredKeys.every(k => k in item));
+        if (!validData) throw new Error('Missing required fields');
+        if (confirm(`Import ${importedData.length} records? This will replace your current data.`)) {
+          tests = importedData;
+          localStorage.setItem('mockTests', JSON.stringify(tests));
+          resetForm();
+          renderTests();
+          populatePlatformFilter();
+          alert('Data imported successfully!');
+        }
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  // Clear all test data
+  function clearAllData() {
+    if (tests.length === 0) {
+      alert('No data to clear!');
+      return;
+    }
+    if (confirm('Are you sure you want to delete ALL test data? This cannot be undone.')) {
+      tests = [];
+      localStorage.removeItem('mockTests');
+      resetForm();
+      renderTests();
+      populatePlatformFilter();
+    }
+  }
+
+  // Populate platform dropdown filter options
+  function populatePlatformFilter() {
+    const uniquePlatforms = [...new Set(tests.map(t => t.platform))];
+    platformFilter.innerHTML = '<option value="">All Platforms</option>';
+    uniquePlatforms.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      platformFilter.appendChild(opt);
     });
   }
 
-  // Update summary cards
-  function updateSummary(data) {
-    const testsCount = document.getElementById('testsCount');
-    testsCount.textContent = data.length;
-    
-    if (data.length === 0) {
-      document.getElementById('avgTotal').textContent = 'N/A';
-      document.getElementById('avgQuant').textContent = 'N/A';
-      document.getElementById('avgReasoning').textContent = 'N/A';
-      document.getElementById('avgEnglish').textContent = 'N/A';
-      document.getElementById('bestTotal').textContent = 'N/A';
-      document.getElementById('avgAccuracy').textContent = 'N/A';
-      document.getElementById('avgPercentile').textContent = 'N/A';
-      return;
-    }
-    
-    document.getElementById('avgTotal').textContent = (data.reduce((sum, t) => sum + t.totalScore, 0) / data.length).toFixed(2);
-    document.getElementById('avgQuant').textContent = (data.reduce((sum, t) => sum + t.quantScore, 0) / data.length).toFixed(2);
-    document.getElementById('avgReasoning').textContent = (data.reduce((sum, t) => sum + t.reasoningScore, 0) / data.length).toFixed(2);
-    document.getElementById('avgEnglish').textContent = (data.reduce((sum, t) => sum + t.englishScore, 0) / data.length).toFixed(2);
-    document.getElementById('bestTotal').textContent = Math.max(...data.map(t => t.totalScore));
-    document.getElementById('avgAccuracy').textContent = (data.reduce((sum, t) => sum + t.accuracy, 0) / data.length).toFixed(2) + '%';
-    document.getElementById('avgPercentile').textContent = (data.reduce((sum, t) => sum + t.percentile, 0) / data.length).toFixed(2) + '%';
-  }
-
-  // Render score chart
+  // Render line chart for Total scores over tests
   function renderScoreChart(data) {
+    if (scoreChart) scoreChart.destroy();
+    if (data.length === 0) return;
+
     const ctx = document.getElementById('scoreChart').getContext('2d');
-    
-    if (scoreChart) {
-      scoreChart.destroy();
-    }
-    
-    if (data.length === 0) {
-      return;
-    }
-    
     const labels = data.map(t => `${t.platform} (${formatDate(t.date)})`);
     const scores = data.map(t => t.totalScore);
-    
+
     scoreChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels,
         datasets: [{
           label: 'Total Score',
           data: scores,
@@ -813,119 +928,62 @@
       options: {
         responsive: true,
         plugins: {
-          title: {
-            display: true,
-            text: 'Total Score Progress'
-          },
+          title: { display: true, text: 'Total Score Progress' },
           tooltip: {
             callbacks: {
-              afterLabel: function(context) {
-                const index = context.dataIndex;
-                return `Quant: ${data[index].quantScore}, Reasoning: ${data[index].reasoningScore}, English: ${data[index].englishScore}`;
+              afterLabel: ctx => {
+                const i = ctx.dataIndex;
+                return `Quant: ${data[i].quantScore}, Reasoning: ${data[i].reasoningScore}, English: ${data[i].englishScore}`;
               }
             }
           }
         },
         scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Score'
-            }
-          },
-          x: {
-            title: {
-              display: true,
-              text: 'Test Date'
-            }
-          }
+          y: { beginAtZero: true, title: { display: true, text: 'Score' } },
+          x: { title: { display: true, text: 'Test Date' } }
         }
       }
     });
   }
 
-  // Render section chart
+  // Render bar chart for section-wise scores
   function renderSectionChart(data) {
+    if (sectionChart) sectionChart.destroy();
+    if (data.length === 0) return;
+
     const ctx = document.getElementById('sectionChart').getContext('2d');
-    
-    if (sectionChart) {
-      sectionChart.destroy();
-    }
-    
-    if (data.length === 0) {
-      return;
-    }
-    
     const labels = data.map(t => `${t.platform} (${formatDate(t.date)})`);
-    
+
     sectionChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: labels,
+        labels,
         datasets: [
-          {
-            label: 'Quantitative',
-            data: data.map(t => t.quantScore),
-            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-            borderColor: 'rgb(255, 99, 132)',
-            borderWidth: 1
-          },
-          {
-            label: 'Reasoning',
-            data: data.map(t => t.reasoningScore),
-            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-            borderColor: 'rgb(54, 162, 235)',
-            borderWidth: 1
-          },
-          {
-            label: 'English',
-            data: data.map(t => t.englishScore),
-            backgroundColor: 'rgba(255, 206, 86, 0.7)',
-            borderColor: 'rgb(255, 206, 86)',
-            borderWidth: 1
-          }
+          { label: 'Quantitative', data: data.map(t => t.quantScore), backgroundColor: 'rgba(255, 99, 132, 0.7)', borderColor: 'rgb(255, 99, 132)', borderWidth: 1 },
+          { label: 'Reasoning', data: data.map(t => t.reasoningScore), backgroundColor: 'rgba(54, 162, 235, 0.7)', borderColor: 'rgb(54, 162, 235)', borderWidth: 1 },
+          { label: 'English', data: data.map(t => t.englishScore), backgroundColor: 'rgba(255, 206, 86, 0.7)', borderColor: 'rgb(255, 206, 86)', borderWidth: 1 }
         ]
       },
       options: {
         responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: 'Section-wise Scores'
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Score'
-            }
-          }
-        }
+        plugins: { title: { display: true, text: 'Section-wise Scores' } },
+        scales: { y: { beginAtZero: true, title: { display: true, text: 'Score' } } }
       }
     });
   }
 
-  // Render accuracy chart
+  // Render line chart for accuracy and percentile
   function renderAccuracyChart(data) {
+    if (accuracyChart) accuracyChart.destroy();
+    if (data.length === 0) return;
+
     const ctx = document.getElementById('accuracyChart').getContext('2d');
-    
-    if (accuracyChart) {
-      accuracyChart.destroy();
-    }
-    
-    if (data.length === 0) {
-      return;
-    }
-    
     const labels = data.map(t => `${t.platform} (${formatDate(t.date)})`);
-    
+
     accuracyChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels,
         datasets: [
           {
             label: 'Accuracy (%)',
@@ -949,233 +1007,16 @@
       },
       options: {
         responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: 'Accuracy and Percentile Trend'
-          }
-        },
+        plugins: { title: { display: true, text: 'Accuracy and Percentile Trend' } },
         scales: {
-          y: {
-            type: 'linear',
-            display: true,
-            position: 'left',
-            title: {
-              display: true,
-              text: 'Accuracy (%)'
-            },
-            min: 0,
-            max: 100
-          },
-          y1: {
-            type: 'linear',
-            display: true,
-            position: 'right',
-            title: {
-              display: true,
-              text: 'Percentile'
-            },
-            min: 0,
-            max: 100,
-            grid: {
-              drawOnChartArea: false
-            }
-          }
+          y: { type: 'linear', position: 'left', min: 0, max: 100, title: { display: true, text: 'Accuracy (%)' } },
+          y1: { type: 'linear', position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentile' } }
         }
       }
     });
   }
 
-  // Save test function
-  function saveTest(e) {
-    e.preventDefault();
-    
-    const newTest = {
-      platform: form.platform.value.trim(),
-      date: form.date.value,
-      totalScore: Number(form.totalScore.value),
-      quantScore: Number(form.quantScore.value),
-      reasoningScore: Number(form.reasoningScore.value),
-      englishScore: Number(form.englishScore.value),
-      percentile: Number(form.percentile.value),
-      accuracy: Number(form.accuracy.value),
-      notes: form.notes.value.trim()
-    };
-    
-    const editIndex = parseInt(form.editIndex.value);
-    
-    if (editIndex >= 0) {
-      // Update existing test
-      tests[editIndex] = newTest;
-      cancelEdit();
-    } else {
-      // Add new test
-      tests.push(newTest);
-    }
-    
-    localStorage.setItem('mockTests', JSON.stringify(tests));
-    form.reset();
-    setDefaultDate();
-    renderTests();
-    updatePlatformFilter();
-  }
-
-  // Edit test function
-  function editTest(index) {
-    const test = tests[index];
-    
-    form.platform.value = test.platform;
-    form.date.value = test.date;
-    form.totalScore.value = test.totalScore;
-    form.quantScore.value = test.quantScore;
-    form.reasoningScore.value = test.reasoningScore;
-    form.englishScore.value = test.englishScore;
-    form.percentile.value = test.percentile;
-    form.accuracy.value = test.accuracy;
-    form.notes.value = test.notes || '';
-    form.editIndex.value = index;
-    
-    submitBtn.innerHTML = '<i class="fas fa-edit"></i> Update Test';
-    cancelEditBtn.style.display = 'block';
-    
-    // Scroll to form
-    form.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  // Cancel edit function
-  function cancelEdit() {
-    form.reset();
-    setDefaultDate();
-    form.editIndex.value = '-1';
-    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Test';
-    cancelEditBtn.style.display = 'none';
-  }
-
-  // Delete test function
-  function deleteTest(index) {
-    if (confirm('Are you sure you want to delete this test record?')) {
-      tests.splice(index, 1);
-      localStorage.setItem('mockTests', JSON.stringify(tests));
-      renderTests();
-      updatePlatformFilter();
-    }
-  }
-
-  // Export to CSV function
-  function exportToCSV() {
-    if (tests.length === 0) {
-      alert('No data to export!');
-      return;
-    }
-    
-    const csv = Papa.unparse(tests);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `bankpo_mock_tests_${date}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  // Export to JSON function
-  function exportToJSON() {
-    if (tests.length === 0) {
-      alert('No data to export!');
-      return;
-    }
-    
-    const dataStr = JSON.stringify(tests, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `bankpo_mock_tests_${date}.json`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  // Import data function
-  function importData(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        let importedData;
-        
-        if (file.name.endsWith('.json')) {
-          importedData = JSON.parse(e.target.result);
-        } else if (file.name.endsWith('.csv')) {
-          const results = Papa.parse(e.target.result, {
-            header: true,
-            dynamicTyping: true,
-            skipEmptyLines: true
-          });
-          importedData = results.data;
-        } else {
-          throw new Error('Unsupported file format');
-        }
-        
-        if (!Array.isArray(importedData)) {
-          throw new Error('Invalid data format');
-        }
-        
-        // Validate imported data
-        const requiredFields = ['platform', 'date', 'totalScore', 'quantScore', 'reasoningScore', 'englishScore', 'percentile', 'accuracy'];
-        const isValid = importedData.every(item => 
-          requiredFields.every(field => field in item)
-        );
-        
-        if (!isValid) {
-          throw new Error('Imported data missing required fields');
-        }
-        
-        if (confirm(`Import ${importedData.length} test records? This will replace your current data.`)) {
-          tests = importedData;
-          localStorage.setItem('mockTests', JSON.stringify(tests));
-          renderTests();
-          updatePlatformFilter();
-          alert('Data imported successfully!');
-        }
-      } catch (error) {
-        alert('Error importing data: ' + error.message);
-        console.error(error);
-      }
-    };
-    reader.readAsText(file);
-    
-    // Reset file input
-    e.target.value = '';
-  }
-
-  // Clear all data function
-  function clearAllData() {
-    if (tests.length === 0) {
-      alert('No data to clear!');
-      return;
-    }
-    
-    if (confirm('Are you sure you want to delete ALL test records? This cannot be undone.')) {
-      tests = [];
-      localStorage.removeItem('mockTests');
-      renderTests();
-      updatePlatformFilter();
-    }
-  }
-
-  // Initialize the application
+  // Initialize app
   init();
 </script>
 </body>
