@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bank PO Mock Test Tracker with Chart</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Bank PO Mock Test Tracker with Sectional Tests</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <style>
   :root {
     --primary: #4361ee;
@@ -394,6 +394,26 @@
           <label for="examName">Exam Name</label>
           <input type="text" id="examName" name="examName" required placeholder="e.g., SBI PO, IBPS PO" />
         </div>
+        
+        <div class="form-group">
+          <label for="testType">Test Type</label>
+          <select id="testType" name="testType" required>
+            <option value="full-length">Full-Length</option>
+            <option value="prelims-sectional">Prelims Sectional</option>
+            <option value="mains-sectional">Mains Sectional</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="sectionGroup" style="display:none;">
+          <label for="section">Section</label>
+          <select id="section" name="section">
+            <option value="" disabled selected>Select Section</option>
+            <option value="Quantitative">Quantitative</option>
+            <option value="Reasoning">Reasoning</option>
+            <option value="English">English</option>
+            <option value="Current Affairs">Current Affairs</option>
+          </select>
+        </div>
 
         <div class="form-group">
           <label for="platform">Test Platform</label>
@@ -523,7 +543,7 @@
     <h2>Test History</h2>
     
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search by platform, notes..." />
+      <input type="text" id="searchInput" placeholder="Search by platform, notes, exam name, type, section..." />
       <button type="button" id="clearSearchBtn" class="secondary">
         <i class="fas fa-times"></i> Clear
       </button>
@@ -561,6 +581,8 @@
         <thead>
           <tr>
             <th>Exam Name</th>
+            <th>Test Type</th>
+            <th>Section</th>
             <th>Platform</th>
             <th>Date</th>
             <th>Total Score</th>
@@ -636,7 +658,7 @@
   </div>
 </div>
 
-<input type="file" id="importFile" accept=".json,.csv" style="display: none;" />
+<input type="file" id="importFile" accept=".json,.csv" style="display:none;"/>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
@@ -664,6 +686,9 @@
   const goalProgressBar = document.getElementById('goalProgressBar');
   const currentScore = document.getElementById('currentScore');
   const goalText = document.getElementById('goalText');
+  const testTypeSelect = document.getElementById('testType');
+  const sectionGroup = document.getElementById('sectionGroup');
+  const sectionSelect = document.getElementById('section');
 
   // Data and Charts
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
@@ -685,6 +710,18 @@
     document.getElementById('date').value = today;
   }
 
+  // Show/hide section select based on test type
+  function toggleSectionSelector() {
+    if (testTypeSelect.value === 'prelims-sectional' || testTypeSelect.value === 'mains-sectional') {
+      sectionGroup.style.display = 'block';
+      sectionSelect.required = true;
+    } else {
+      sectionGroup.style.display = 'none';
+      sectionSelect.required = false;
+      sectionSelect.value = '';
+    }
+  }
+
   // Setup event listeners
   function setupEventListeners() {
     form.addEventListener('submit', saveTest);
@@ -704,6 +741,7 @@
     clearAllBtn.addEventListener('click', clearAllData);
     cancelEditBtn.addEventListener('click', cancelEdit);
     setGoalBtn.addEventListener('click', setScoreGoal);
+    testTypeSelect.addEventListener('change', toggleSectionSelector);
     
     // Tab functionality
     tabs.forEach(tab => {
@@ -732,6 +770,9 @@
         }
       });
     });
+
+    // Initialize section selector visibility
+    toggleSectionSelector();
   }
 
   // Get filtered tests based on search and filters
@@ -739,12 +780,14 @@
     let filteredTests = [...tests];
     const searchTerm = searchInput.value.toLowerCase();
     
-    // Apply search filter
+    // Apply search filter (including new fields)
     if (searchTerm) {
       filteredTests = filteredTests.filter(t => 
-        t.platform.toLowerCase().includes(searchTerm) || 
+        (t.platform && t.platform.toLowerCase().includes(searchTerm)) || 
         (t.notes && t.notes.toLowerCase().includes(searchTerm)) ||
-        (t.examName && t.examName.toLowerCase().includes(searchTerm))
+        (t.examName && t.examName.toLowerCase().includes(searchTerm)) ||
+        (t.testType && t.testType.toLowerCase().includes(searchTerm)) ||
+        (t.section && t.section.toLowerCase().includes(searchTerm))
       );
     }
     
@@ -795,9 +838,13 @@
     } else {
       emptyState.style.display = 'none';
       filteredTests.forEach((test, index) => {
+        const testTypeLabel = getTestTypeLabel(test.testType);
+        const sectionLabel = test.section || '-';
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${test.examName || ''}</td>
+          <td>${testTypeLabel}</td>
+          <td>${sectionLabel}</td>
           <td>${test.platform}</td>
           <td>${formatDate(test.date)}</td>
           <td>${test.totalScore}</td>
@@ -822,6 +869,16 @@
     updateSummary(filteredTests);
     renderScoreChart(filteredTests);
     updateGoalProgress();
+  }
+
+  // Map test type codes to readable labels
+  function getTestTypeLabel(type) {
+    switch(type) {
+      case 'full-length': return 'Full-Length';
+      case 'prelims-sectional': return 'Prelims Sectional';
+      case 'mains-sectional': return 'Mains Sectional';
+      default: return type || '-';
+    }
   }
 
   // Format date for display
@@ -1165,6 +1222,8 @@
     
     const newTest = {
       examName: form.examName.value.trim(),
+      testType: form.testType.value,
+      section: form.section.value || null,
       platform: form.platform.value.trim(),
       date: form.date.value,
       totalScore: Number(form.totalScore.value),
@@ -1191,6 +1250,7 @@
     localStorage.setItem('mockTests', JSON.stringify(tests));
     form.reset();
     setDefaultDate();
+    toggleSectionSelector();
     renderTests();
     updatePlatformFilter();
   }
@@ -1200,6 +1260,9 @@
     const test = tests[index];
     
     form.examName.value = test.examName || '';
+    form.testType.value = test.testType || 'full-length';
+    toggleSectionSelector();
+    sectionSelect.value = test.section || '';
     form.platform.value = test.platform;
     form.date.value = test.date;
     form.totalScore.value = test.totalScore;
@@ -1226,6 +1289,7 @@
     form.editIndex.value = '-1';
     submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Test';
     cancelEditBtn.style.display = 'none';
+    toggleSectionSelector();
   }
 
   // Delete test function
@@ -1310,7 +1374,7 @@
         }
         
         // Validate imported data
-        const requiredFields = ['examName', 'platform', 'date', 'totalScore', 'quantScore', 'reasoningScore', 'englishScore', 'percentile', 'accuracy'];
+        const requiredFields = ['examName', 'testType', 'platform', 'date', 'totalScore', 'quantScore', 'reasoningScore', 'englishScore', 'percentile', 'accuracy'];
         const isValid = importedData.every(item => 
           requiredFields.every(field => field in item)
         );
@@ -1335,21 +1399,6 @@
     
     // Reset file input
     e.target.value = '';
-  }
-
-  // Clear all data function
-  function clearAllData() {
-    if (tests.length === 0) {
-      alert('No data to clear!');
-      return;
-    }
-    
-    if (confirm('Are you sure you want to delete ALL test records? This cannot be undone.')) {
-      tests = [];
-      localStorage.removeItem('mockTests');
-      renderTests();
-      updatePlatformFilter();
-    }
   }
 
   // Initialize the application
