@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bank PO Mock Test Tracker with Sectional Tests</title>
+<title>Bank PO Mock Test Tracker with Sectional Tests & Achievements</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <style>
   :root {
@@ -350,6 +350,49 @@
     color: var(--secondary);
   }
   
+  /* New Achievements Section Styles */
+  #achievementsSection {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+  }
+  
+  #achievementsSection h2 {
+    color: var(--primary);
+    margin-bottom: 15px;
+  }
+  
+  .achievement-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .achievement-card {
+    flex: 1 1 220px;
+    background: var(--light);
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 5px rgba(67, 97, 238, 0.25);
+  }
+  
+  .achievement-card i {
+    font-size: 40px;
+    color: var(--primary);
+  }
+  
+  .achievement-desc {
+    font-size: 16px;
+    color: var(--dark);
+  }
+  
+  /* Responsive adjustments */
   @media (max-width: 768px) {
     .grid {
       grid-template-columns: 1fr;
@@ -373,6 +416,14 @@
     
     .export-options {
       flex-wrap: wrap;
+    }
+    
+    .achievement-list {
+      flex-direction: column;
+    }
+    
+    .achievement-card {
+      flex: 1 1 100%;
     }
   }
 </style>
@@ -675,6 +726,14 @@
       </div>
     </div>
   </div>
+
+  <!-- New Achievements Section -->
+  <div id="achievementsSection" class="card">
+    <h2>Achievements</h2>
+    <div class="achievement-list" id="achievementList">
+      <!-- Achievement cards will be dynamically inserted here -->
+    </div>
+  </div>
 </div>
 
 <input type="file" id="importFile" accept=".json,.csv" style="display:none;"/>
@@ -682,7 +741,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
 <script>
-  // DOM Elements
+  // DOM Elements (existing)...
   const form = document.getElementById('mockTestForm');
   const tableBody = document.querySelector('#testsTable tbody');
   const searchInput = document.getElementById('searchInput');
@@ -708,10 +767,12 @@
   const testTypeSelect = document.getElementById('testType');
   const sectionGroup = document.getElementById('sectionGroup');
   const sectionSelect = document.getElementById('section');
+  const achievementList = document.getElementById('achievementList');
 
   // Data and Charts
   let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
   let scoreGoal = JSON.parse(localStorage.getItem('scoreGoal')) || null;
+  let achievements = JSON.parse(localStorage.getItem('achievements')) || {};
   let scoreChart, sectionChart, accuracyChart, timeChart;
 
   // Initialize the application
@@ -723,6 +784,8 @@
     updateGoalProgress();
     toggleSectionSelector();
     toggleSectionScores();
+    checkAndUpdateAchievements();
+    renderAchievements();
   }
 
   // Set default date to today
@@ -923,6 +986,8 @@
     updateSummary(filteredTests);
     renderScoreChart(filteredTests);
     updateGoalProgress();
+    checkAndUpdateAchievements();
+    renderAchievements();
   }
 
   // Map test type codes to readable labels
@@ -1359,26 +1424,25 @@
     form.timeSpent.value = test.timeSpent || '';
     form.notes.value = test.notes || '';
     form.editIndex.value = index;
-    
-    submitBtn.innerHTML = '<i class="fas fa-edit"></i> Update Test';
-    cancelEditBtn.style.display = 'block';
-    
-    // Scroll to form
-    form.scrollIntoView({ behavior: 'smooth' });
+
+    cancelEditBtn.style.display = 'inline-flex';
+    submitBtn.textContent = '';
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Test';
   }
 
   // Cancel edit function
   function cancelEdit() {
     form.reset();
     setDefaultDate();
-    form.editIndex.value = '-1';
-    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Test';
-    cancelEditBtn.style.display = 'none';
     toggleSectionSelector();
     toggleSectionScores();
+    form.editIndex.value = -1;
+    cancelEditBtn.style.display = 'none';
+    submitBtn.textContent = '';
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Test';
   }
 
-  // Delete test function
+  // Delete test
   function deleteTest(index) {
     if (confirm('Are you sure you want to delete this test record?')) {
       tests.splice(index, 1);
@@ -1388,117 +1452,181 @@
     }
   }
 
-  // Export to CSV function
+  // Export to CSV
   function exportToCSV() {
     if (tests.length === 0) {
-      alert('No data to export!');
+      alert('No data to export.');
       return;
     }
-    
-    const csv = Papa.unparse(tests);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const csvData = Papa.unparse(tests);
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `bankpo_mock_tests_${date}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mock_tests.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  // Export to JSON function
+  // Export to JSON
   function exportToJSON() {
     if (tests.length === 0) {
-      alert('No data to export!');
+      alert('No data to export.');
       return;
     }
-    
-    const dataStr = JSON.stringify(tests, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    const jsonData = JSON.stringify(tests, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `bankpo_mock_tests_${date}.json`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mock_tests.json';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  // Import data function
-  function importData(e) {
-    const file = e.target.files[0];
+  // Import data
+  function importData(event) {
+    const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
+      const content = e.target.result;
+      let importedTests = [];
       try {
-        let importedData;
-        
-        if (file.name.endsWith('.json')) {
-          importedData = JSON.parse(e.target.result);
-        } else if (file.name.endsWith('.csv')) {
-          const results = Papa.parse(e.target.result, {
-            header: true,
-            dynamicTyping: true,
-            skipEmptyLines: true
-          });
-          importedData = results.data;
+        if (file.name.endsWith('.csv')) {
+          importedTests = Papa.parse(content, { header: true, skipEmptyLines: true }).data;
+          importedTests = importedTests.map(t => ({
+            ...t,
+            totalScore: Number(t.totalScore),
+            quantScore: Number(t.quantScore),
+            reasoningScore: Number(t.reasoningScore),
+            englishScore: Number(t.englishScore),
+            percentile: Number(t.percentile),
+            accuracy: Number(t.accuracy),
+            timeSpent: t.timeSpent ? Number(t.timeSpent) : null
+          }));
+        } else if (file.name.endsWith('.json')) {
+          importedTests = JSON.parse(content);
         } else {
-          throw new Error('Unsupported file format');
+          alert('Unsupported file format. Please upload CSV or JSON.');
+          return;
         }
-        
-        if (!Array.isArray(importedData)) {
-          throw new Error('Invalid data format');
-        }
-        
-        // Validate imported data
-        const requiredFields = ['examName', 'testType', 'platform', 'date', 'totalScore', 'quantScore', 'reasoningScore', 'englishScore', 'percentile', 'accuracy'];
-        const isValid = importedData.every(item => 
-          requiredFields.every(field => field in item)
-        );
-        
-        if (!isValid) {
-          throw new Error('Imported data missing required fields');
-        }
-        
-        if (confirm(`Import ${importedData.length} test records? This will replace your current data.`)) {
-          tests = importedData;
-          localStorage.setItem('mockTests', JSON.stringify(tests));
-          renderTests();
-          updatePlatformFilter();
-          alert('Data imported successfully!');
-        }
-      } catch (error) {
-        alert('Error importing data: ' + error.message);
-        console.error(error);
+        tests = importedTests;
+        localStorage.setItem('mockTests', JSON.stringify(tests));
+        renderTests();
+        updatePlatformFilter();
+        alert('Data imported successfully!');
+      } catch (err) {
+        alert('Failed to import data: ' + err.message);
       }
     };
     reader.readAsText(file);
-    
-    // Reset file input
-    e.target.value = '';
+    importFile.value = '';
   }
 
-  // Clear all data function
+  // Clear all data
   function clearAllData() {
-    if (confirm('Are you sure you want to clear all test data? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to clear all your test data? This cannot be undone.')) {
       tests = [];
       localStorage.removeItem('mockTests');
+      localStorage.removeItem('achievements');
+      achievements = {};
       renderTests();
       updatePlatformFilter();
+      renderAchievements();
+      alert('All data cleared.');
     }
   }
 
-  // Initialize the application
+  // ------------------ ACHIEVEMENT SYSTEM ------------------
+
+  // Define achievements with keys, title, description, and icon class
+  const achievementDefinitions = {
+    consistencyStreak3: {
+      title: 'Consistency Streak: 3 Tests',
+      description: 'Scored above 10 marks in 3 consecutive tests',
+      icon: 'fa-solid fa-fire'
+    },
+    personalBestScore: {
+      title: 'New Personal Best',
+      description: 'Achieved a new highest total score',
+      icon: 'fa-solid fa-trophy'
+    },
+    accuracy80: {
+      title: 'Accuracy Champion',
+      description: 'Achieved 80% or higher accuracy for the first time',
+      icon: 'fa-solid fa-bullseye'
+    }
+  };
+
+  // Check and update achievements based on current data
+  function checkAndUpdateAchievements() {
+    if (tests.length === 0) return;
+
+    // Sort tests by date ascending to check streaks properly
+    const sortedTests = [...tests].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // --- Consistency Streak of scoring above 10 in 3 consecutive tests ---
+    let streakCount = 0;
+    for (let test of sortedTests) {
+      if (test.totalScore > 10) { // Threshold can be adjusted
+        streakCount++;
+      } else {
+        streakCount = 0;
+      }
+      if (streakCount >= 3) {
+        achievements.consistencyStreak3 = true;
+        break;
+      }
+    }
+
+    // --- Personal Best Total Score ---
+    const maxScore = Math.max(...tests.map(t => t.totalScore));
+    if (!achievements.personalBestScore || achievements.personalBestScoreMax < maxScore) {
+      achievements.personalBestScore = true;
+      achievements.personalBestScoreMax = maxScore;
+    }
+
+    // --- Accuracy 80% or higher for first time ---
+    const accuracy80Achieved = tests.some(t => t.accuracy >= 80);
+    if (accuracy80Achieved) {
+      achievements.accuracy80 = true;
+    }
+
+    localStorage.setItem('achievements', JSON.stringify(achievements));
+  }
+
+  // Render achievement cards in the achievements section
+  function renderAchievements() {
+    achievementList.innerHTML = '';
+    const earnedKeys = Object.keys(achievements).filter(key => achievements[key] === true);
+
+    if (earnedKeys.length === 0) {
+      achievementList.innerHTML = '<p>No achievements unlocked yet. Keep going!</p>';
+      return;
+    }
+
+    earnedKeys.forEach(key => {
+      const achievement = achievementDefinitions[key];
+      if (achievement) {
+        const card = document.createElement('div');
+        card.className = 'achievement-card';
+        card.innerHTML = `
+          <i class="${achievement.icon}"></i>
+          <div class="achievement-desc">
+            <strong>${achievement.title}</strong><br/>
+            <small>${achievement.description}</small>
+          </div>
+        `;
+        achievementList.appendChild(card);
+      }
+    });
+  }
+
+  // Initialize app on page load
   init();
 </script>
+
 </body>
 </html>
