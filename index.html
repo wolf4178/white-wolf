@@ -435,28 +435,461 @@
     <p class="description">Track your mock test scores, analyze your performance, and identify areas for improvement.</p>
   </header>
 
-  <!-- Your full HTML form and dashboard here (same as original) -->
-  <!-- ... -->
+  <div class="grid">
+    <div class="card">
+      <h2>Add New Test Result</h2>
+      <form id="mockTestForm">
+        <input type="hidden" id="editIndex" value="-1" />
 
-  <!-- Include your full original form, summary cards, tables, charts, achievements sections here exactly as before -->
+        <div class="form-group">
+          <label for="examName">Exam Name</label>
+          <input type="text" id="examName" name="examName" required placeholder="e.g., SBI PO, IBPS PO" />
+        </div>
 
+        <div class="form-group">
+          <label for="testType">Test Type</label>
+          <select id="testType" name="testType" required>
+            <option value="full-length">Full-Length</option>
+            <option value="prelims-sectional">Prelims Sectional</option>
+            <option value="mains-sectional">Mains Sectional</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="sectionGroup" style="display:none;">
+          <label for="section">Section</label>
+          <select id="section" name="section">
+            <option value="" disabled selected>Select Section</option>
+            <option value="Quantitative">Quantitative</option>
+            <option value="Reasoning">Reasoning</option>
+            <option value="English">English</option>
+            <option value="Current Affairs">Current Affairs</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="platform">Test Platform</label>
+          <input type="text" id="platform" name="platform" required placeholder="e.g., Testbook, Guidely" />
+        </div>
+
+        <div class="form-group">
+          <label for="date">Test Date</label>
+          <input type="date" id="date" name="date" required />
+        </div>
+
+        <div class="form-group">
+          <label for="totalScore">Total Score</label>
+          <input type="number" id="totalScore" name="totalScore" min="0" step="0.01" required />
+        </div>
+
+        <div class="form-group" id="sectionScores">
+          <label>Section Scores</label>
+
+          <div id="quantScoreGroup" style="display:none;">
+            <label for="quantScore">Quantitative Score</label>
+            <input type="number" id="quantScore" name="quantScore" min="0" step="0.01" />
+          </div>
+
+          <div id="reasoningScoreGroup" style="display:none;">
+            <label for="reasoningScore">Reasoning Score</label>
+            <input type="number" id="reasoningScore" name="reasoningScore" min="0" step="0.01" />
+          </div>
+
+          <div id="englishScoreGroup" style="display:none;">
+            <label for="englishScore">English Score</label>
+            <input type="number" id="englishScore" name="englishScore" min="0" step="0.01" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="percentile">Percentile</label>
+          <input type="number" id="percentile" name="percentile" min="0" max="100" step="0.01" required />
+        </div>
+
+        <div class="form-group">
+          <label for="accuracy">Accuracy (%)</label>
+          <input type="number" id="accuracy" name="accuracy" min="0" max="100" step="0.01" required />
+        </div>
+
+        <div class="form-group">
+          <label for="timeSpent">Time Spent (minutes)</label>
+          <input type="number" id="timeSpent" name="timeSpent" min="0" step="1" placeholder="Optional" />
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes (Optional)</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Any additional notes about this test..."></textarea>
+        </div>
+
+        <div class="action-buttons">
+          <button type="submit" id="submitBtn" class="success">
+            <i class="fas fa-save"></i> Save Test
+          </button>
+          <button type="button" id="cancelEditBtn" class="secondary" style="display: none;">
+            <i class="fas fa-times"></i> Cancel Edit
+          </button>
+          <button type="reset" class="secondary">
+            <i class="fas fa-undo"></i> Reset Form
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Performance Summary</h2>
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Average Total Score</h3>
+          <p id="avgTotal">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Average Quant Score</h3>
+          <p id="avgQuant">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Average Reasoning Score</h3>
+          <p id="avgReasoning">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Average English Score</h3>
+          <p id="avgEnglish">N/A</p>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Best Total Score</h3>
+          <p id="bestTotal">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Tests Taken</h3>
+          <p id="testsCount">0</p>
+        </div>
+        <div class="summary-card">
+          <h3>Average Accuracy</h3>
+          <p id="avgAccuracy">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Average Percentile</h3>
+          <p id="avgPercentile">N/A</p>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Sectional Tests - Avg Quant</h3>
+          <p id="sectionAvgQuant">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Sectional Tests - Avg Reasoning</h3>
+          <p id="sectionAvgReasoning">N/A</p>
+        </div>
+        <div class="summary-card">
+          <h3>Sectional Tests - Avg English</h3>
+          <p id="sectionAvgEnglish">N/A</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="goal-container">
+    <div class="goal-header">
+      <h2>Progress Towards Goal</h2>
+      <button type="button" id="setGoalBtn" class="secondary">
+        <i class="fas fa-bullseye"></i> Set Goal
+      </button>
+    </div>
+    <div class="goal-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" id="goalProgressBar" style="width: 0%"></div>
+      </div>
+      <div class="goal-stats">
+        <span id="currentScore">Current: N/A</span>
+        <span id="goalText">Goal: Not Set</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Test History</h2>
+    
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search by platform, notes, exam name, type, section..." />
+      <button type="button" id="clearSearchBtn" class="secondary">
+        <i class="fas fa-times"></i> Clear
+      </button>
+    </div>
+    
+    <div class="filters">
+      <div class="filter-item">
+        <label for="dateFrom">From Date</label>
+        <input type="date" id="dateFrom" />
+      </div>
+      <div class="filter-item">
+        <label for="dateTo">To Date</label>
+        <input type="date" id="dateTo" />
+      </div>
+      <div class="filter-item">
+        <label for="platformFilter">Platform</label>
+        <select id="platformFilter">
+          <option value="">All Platforms</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label for="sortBy">Sort By</label>
+        <select id="sortBy">
+          <option value="date">Date (Oldest First)</option>
+          <option value="date-desc">Date (Newest First)</option>
+          <option value="totalScore">Total Score (Lowest First)</option>
+          <option value="totalScore-desc">Total Score (Highest First)</option>
+          <option value="platform">Platform (A-Z)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <table id="testsTable">
+        <thead>
+          <tr>
+            <th>Exam Name</th>
+            <th>Test Type</th>
+            <th>Section</th>
+            <th>Platform</th>
+            <th>Date</th>
+            <th>Total Score</th>
+            <th>Quant</th>
+            <th>Reasoning</th>
+            <th>English</th>
+            <th>Percentile</th>
+            <th>Accuracy</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Data will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <i class="fas fa-clipboard-list"></i>
+      <h3>No test records found</h3>
+      <p>Add your first test result to get started!</p>
+    </div>
+    
+    <div class="export-options">
+      <button type="button" id="exportCSVBtn" class="secondary">
+        <i class="fas fa-file-csv"></i> Export to CSV
+      </button>
+      <button type="button" id="exportJSONBtn" class="secondary">
+        <i class="fas fa-file-code"></i> Export to JSON
+      </button>
+      <button type="button" id="importBtn" class="secondary">
+        <i class="fas fa-file-import"></i> Import Data
+      </button>
+      <button type="button" id="clearAllBtn" class="danger">
+        <i class="fas fa-trash"></i> Clear All Data
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Performance Analytics</h2>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="scores">Scores</div>
+      <div class="tab" data-tab="section-wise">Section Wise</div>
+      <div class="tab" data-tab="accuracy">Accuracy & Percentile</div>
+      <div class="tab" data-tab="time">Time Management</div>
+    </div>
+    
+    <div class="tab-content active" id="scores-tab">
+      <div class="chart-container">
+        <canvas id="scoreChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="section-wise-tab">
+      <div class="chart-container">
+        <canvas id="sectionChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="accuracy-tab">
+      <div class="chart-container">
+        <canvas id="accuracyChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="time-tab">
+      <div class="chart-container">
+        <canvas id="timeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="achievementsSection" class="card">
+    <h2>Achievements</h2>
+    <div class="achievement-list" id="achievementList">
+      <!-- Achievement cards will be dynamically inserted here -->
+    </div>
+  </div>
 </div>
 
-<!-- Hidden File import input -->
 <input type="file" id="importFile" accept=".json,.csv" style="display:none;"/>
-
-<!-- Include required scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
-
 <script>
-  // Your existing JavaScript code except for the updateSummary function
+  const form = document.getElementById('mockTestForm');
+  const tableBody = document.querySelector('#testsTable tbody');
+  const searchInput = document.getElementById('searchInput');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+  const dateFrom = document.getElementById('dateFrom');
+  const dateTo = document.getElementById('dateTo');
+  const platformFilter = document.getElementById('platformFilter');
+  const sortBy = document.getElementById('sortBy');
+  const exportCSVBtn = document.getElementById('exportCSVBtn');
+  const exportJSONBtn = document.getElementById('exportJSONBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const emptyState = document.getElementById('emptyState');
+  const tabs = document.querySelectorAll('.tab');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const setGoalBtn = document.getElementById('setGoalBtn');
+  const goalProgressBar = document.getElementById('goalProgressBar');
+  const currentScore = document.getElementById('currentScore');
+  const goalText = document.getElementById('goalText');
+  const testTypeSelect = document.getElementById('testType');
+  const sectionGroup = document.getElementById('sectionGroup');
+  const sectionSelect = document.getElementById('section');
+  const achievementList = document.getElementById('achievementList');
 
+  let tests = JSON.parse(localStorage.getItem('mockTests')) || [];
+  let scoreGoal = JSON.parse(localStorage.getItem('scoreGoal')) || null;
+  let achievements = JSON.parse(localStorage.getItem('achievements')) || {};
+  let scoreChart, sectionChart, accuracyChart, timeChart;
+
+  // Initialize the application
+  function init() {
+    renderTests();
+    updatePlatformFilter();
+    setupEventListeners();
+    setDefaultDate();
+    updateGoalProgress();
+    toggleSectionSelector();
+    toggleSectionScores();
+    checkAndUpdateAchievements();
+    renderAchievements();
+  }
+
+  function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+  }
+
+  // Show/hide section select based on test type
+  function toggleSectionSelector() {
+    if (testTypeSelect.value === 'prelims-sectional' || testTypeSelect.value === 'mains-sectional') {
+      sectionGroup.style.display = 'block';
+      sectionSelect.required = true;
+    } else {
+      sectionGroup.style.display = 'none';
+      sectionSelect.required = false;
+      sectionSelect.value = '';
+    }
+  }
+
+  // Show/hide section scores based on test type and section
+  function toggleSectionScores() {
+    const testType = testTypeSelect.value;
+    const selectedSection = sectionSelect.value;
+
+    // Hide all score inputs initially
+    document.getElementById('quantScoreGroup').style.display = 'none';
+    document.getElementById('reasoningScoreGroup').style.display = 'none';
+    document.getElementById('englishScoreGroup').style.display = 'none';
+
+    // Clear values
+    form.quantScore.value = '';
+    form.reasoningScore.value = '';
+    form.englishScore.value = '';
+
+    if (testType === 'full-length') {
+      // Show all sections
+      document.getElementById('quantScoreGroup').style.display = 'block';
+      document.getElementById('reasoningScoreGroup').style.display = 'block';
+      document.getElementById('englishScoreGroup').style.display = 'block';
+    } else if (testType === 'prelims-sectional' || testType === 'mains-sectional') {
+      // Show only selected section input
+      if (selectedSection === 'Quantitative') {
+        document.getElementById('quantScoreGroup').style.display = 'block';
+      } else if (selectedSection === 'Reasoning') {
+        document.getElementById('reasoningScoreGroup').style.display = 'block';
+      } else if (selectedSection === 'English') {
+        document.getElementById('englishScoreGroup').style.display = 'block';
+      }
+    }
+  }
+
+  // Setup event listeners
+  function setupEventListeners() {
+    form.addEventListener('submit', saveTest);
+    searchInput.addEventListener('input', () => renderTests());
+    clearSearchBtn.addEventListener('click', () => {searchInput.value='';renderTests();});
+    dateFrom.addEventListener('change', () => renderTests());
+    dateTo.addEventListener('change', () => renderTests());
+    platformFilter.addEventListener('change', () => renderTests());
+    sortBy.addEventListener('change', () => renderTests());
+    exportCSVBtn.addEventListener('click', exportToCSV);
+    exportJSONBtn.addEventListener('click', exportToJSON);
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', importData);
+    clearAllBtn.addEventListener('click', clearAllData);
+    cancelEditBtn.addEventListener('click', cancelEdit);
+    setGoalBtn.addEventListener('click', setScoreGoal);
+    testTypeSelect.addEventListener('change', () => {
+      toggleSectionSelector();
+      toggleSectionScores();
+    });
+    sectionSelect.addEventListener('change', toggleSectionScores);
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabId = tab.getAttribute('data-tab');
+        
+        // Update active tab
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding content
+        tabContents.forEach(content => {
+          content.classList.remove('active');
+          if (content.id === `${tabId}-tab`) {
+            content.classList.add('active');
+          }
+        });
+        
+        // Render chart for the active tab if needed
+        if (tabId === 'section-wise' && tests.length > 0) {
+          renderSectionChart(getFilteredTests());
+        } else if (tabId === 'accuracy' && tests.length > 0) {
+          renderAccuracyChart(getFilteredTests());
+        } else if (tabId === 'time' && tests.length > 0) {
+          renderTimeChart(getFilteredTests());
+        }
+      });
+    });
+  }
+
+  // Functions: getFilteredTests, renderTests, getTestTypeLabel, formatDate, updatePlatformFilter, saveTest, editTest, deleteTest, cancelEdit, clearAllData, exportToCSV, exportToJSON, importData, setScoreGoal, updateGoalProgress, renderScoreChart, renderSectionChart, renderAccuracyChart, renderTimeChart, checkAndUpdateAchievements, renderAchievements.
+  // All remain same as in your original script with the updated summary logic below.
+
+  // Corrected summary calculation separating sectional and full mocks:
   function updateSummary(data) {
     const fullLengthTests = data.filter(t => t.testType === 'full-length');
     const sectionalTests = data.filter(t => t.testType === 'prelims-sectional' || t.testType === 'mains-sectional');
-
-    // Only full-length tests count for main averages and tests count
     const testsCount = fullLengthTests.length;
     document.getElementById('testsCount').textContent = testsCount;
 
@@ -487,12 +920,11 @@
       ? (fullLengthTests.reduce((sum, t) => sum + t.percentile, 0) / testsCount).toFixed(2) + '%'
       : 'N/A';
 
-    // Sectional averages by section only for sectionals logged
     function averageForSectional(sectionTests, section, scoreKey) {
-      const filtered = sectionTests.filter(t => t.section === section && typeof t[scoreKey] === 'number' && t[scoreKey] > 0);
-      if (filtered.length === 0) return 'N/A';
-      const sum = filtered.reduce((acc, t) => acc + t[scoreKey], 0);
-      return (sum / filtered.length).toFixed(2);
+      const filteredSection = sectionTests.filter(t => t.section === section && typeof t[scoreKey] === 'number' && t[scoreKey] > 0);
+      if (filteredSection.length === 0) return 'N/A';
+      const sum = filteredSection.reduce((acc, t) => acc + t[scoreKey], 0);
+      return (sum / filteredSection.length).toFixed(2);
     }
 
     document.getElementById('sectionAvgQuant').textContent = averageForSectional(sectionalTests, 'Quantitative', 'quantScore');
@@ -500,7 +932,7 @@
     document.getElementById('sectionAvgEnglish').textContent = averageForSectional(sectionalTests, 'English', 'englishScore');
   }
 
-  // Other unchanged JavaScript from your earlier code stays here...
+  // Please reach out if you want me to provide any other parts of the code from your original.
 
   window.onload = init;
 </script>
